@@ -25,6 +25,12 @@ export const getUserById = async (req: Request, res: Response) => {
     }
     return res.status(STATUS_CODES.OK).json(user);
   } catch (error) {
+    if (error instanceof mongoose.Error.CastError) {
+      return res
+        .status(STATUS_CODES.BAD_REQUEST)
+        .json({ message: ERROR_MESSAGES.INVALID_DATA });
+    }
+
     return res
       .status(STATUS_CODES.INTERNAL_SERVER_ERROR)
       .json({ message: ERROR_MESSAGES.SERVER_ERROR });

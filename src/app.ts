@@ -1,8 +1,7 @@
 import express, { NextFunction, Request, Response } from 'express';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
-import usersRouter from './routes/usersRouter';
-import cardsRouter from './routes/cardsRouter';
+import router from './routes';
 import { ERROR_MESSAGES } from './utils/messages';
 import { STATUS_CODES } from './utils/statuses';
 
@@ -21,15 +20,6 @@ dotenv.config();
 const { PORT = 3000 } = process.env;
 const app = express();
 
-mongoose
-  .connect('mongodb://localhost:27017/mestodb')
-  .then(() => {
-    console.log('Connected to MongoDB');
-  })
-  .catch((err) => {
-    console.log('Error connecting to MongoDB', err);
-  });
-
 app.use((req: Request, res: Response, next: NextFunction) => {
   req.user = {
     _id: '69f3420ac2e5de7862137491',
@@ -39,8 +29,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 });
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use('/users', usersRouter);
-app.use('/cards', cardsRouter);
+app.use(router);
 
 app.use((_req: Request, res: Response) => {
   res
@@ -48,6 +37,15 @@ app.use((_req: Request, res: Response) => {
     .json({ message: ERROR_MESSAGES.ROUTE_NOT_FOUND });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+mongoose
+  .connect('mongodb://localhost:27017/mestodb')
+  .then(() => {
+    console.log('Connected to MongoDB');
+    app.listen(PORT, () => {
+      console.log(`Server is running on port ${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error('Error connecting to MongoDB', err);
+    process.exit(1);
+  });
