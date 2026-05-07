@@ -1,9 +1,15 @@
 import express, { NextFunction, Request, Response } from 'express';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
+import cookieParser from 'cookie-parser';
+import { errors } from 'celebrate';
 import router from './routes';
+import auth from './middlewares/auth';
+import { createUser, login } from './controllers/users';
 import { ERROR_MESSAGES } from './utils/messages';
 import { STATUS_CODES } from './utils/statuses';
+import { requestLogger, errorLogger } from './middlewares/logger';
+import { validateSignIn, validateSignUp } from './middlewares/validation';
 
 /* eslint-disable no-shadow, no-unused-vars -- augmentation merges Express Request */
 declare module 'express-serve-static-core' {
@@ -20,21 +26,48 @@ dotenv.config();
 const { PORT = 3000 } = process.env;
 const app = express();
 
-app.use((req: Request, res: Response, next: NextFunction) => {
-  req.user = {
-    _id: '69f3420ac2e5de7862137491',
-  };
-
-  next();
-});
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+
+app.use(requestLogger);
+
+app.post('/signin', validateSignIn, login);
+app.post('/signup', validateSignUp, createUser);
+app.use(auth);
 app.use(router);
+
+app.use(errorLogger);
+app.use(errors());
 
 app.use((_req: Request, res: Response) => {
   res
     .status(STATUS_CODES.NOT_FOUND)
     .json({ message: ERROR_MESSAGES.ROUTE_NOT_FOUND });
+});
+
+app.use((
+  err: Error & { statusCode?: number },
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  if (res.headersSent) {
+    return next(err);
+  }
+
+  const { statusCode = STATUS_CODES.INTERNAL_SERVER_ERROR, message } = err;
+
+  res
+    .status(statusCode)
+    .send({
+      // проверяем статус и выставляем сообщение в зависимости от него
+      message: statusCode === STATUS_CODES.INTERNAL_SERVER_ERROR
+        ? ERROR_MESSAGES.SERVER_ERROR
+        : message,
+    });
+
+  return undefined;
 });
 
 mongoose

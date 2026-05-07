@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { URL_REGEX } from '../utils/regex';
 
 interface ICard {
   name: string;
@@ -18,6 +19,10 @@ const cardSchema = new mongoose.Schema<ICard>({
   link: {
     type: String,
     required: true,
+    validate: {
+      validator: (v: string) => URL_REGEX.test(v),
+      message: 'Некорректная ссылка',
+    },
   },
   owner: {
     type: mongoose.Schema.Types.ObjectId,
